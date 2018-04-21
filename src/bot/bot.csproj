@@ -4,15 +4,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{91D740E4-31ED-48EC-9909-DA076AB04DFC}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <RootNamespace>YuriDb</RootNamespace>
-    <AssemblyName>YuriDb</AssemblyName>
+    <ProjectGuid>{D9C1F3B1-E5A4-4B22-98DF-53AE93809296}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>YuriDb.Bot</RootNamespace>
+    <AssemblyName>Bot</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-	<BaseIntermediateOutputPath>$(SolutionDir)\obj\$(Configuration)\$(AssemblyName)\</BaseIntermediateOutputPath>
-
+    <BaseIntermediateOutputPath>$(SolutionDir)\obj\$(Configuration)\$(AssemblyName)\</BaseIntermediateOutputPath>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -32,28 +32,23 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System.Net.Http" />
+    <Compile Include="Bot.cs" />
+    <Compile Include="Modules\Core.cs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="DotEnvFile">
-      <Version>1.0.0</Version>
-    </PackageReference>
-    <PackageReference Include="MySql.Data">
-      <Version>6.10.6</Version>
-    </PackageReference>
+    <ProjectReference Include="$(SolutionDir)\src\core\core.csproj" />
     <PackageReference Include="Newtonsoft.Json">
       <Version>11.0.2</Version>
     </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="TmoClient.cs" />
-    <Compile Include="YuriDb.cs" />
-    <Compile Include="Actualizador.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="$(SolutionDir)\.env">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <PackageReference Include="Discord.NET">
+      <Version>2.0.0-beta</Version>
+    </PackageReference>
+    <PackageReference Include="System.Net.Http.WinHttpHandler">
+      <Version>4.4.0</Version>
+    </PackageReference>
+    <PackageReference Include="System.Net.Http">
+      <Version>4.3.3</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
