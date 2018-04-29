@@ -63,13 +63,14 @@ namespace YuriDb.Bot.Modules
                                                  uint i, 
                                                  uint r)
         {
+            int j = i;
             StringBuilder sb = new StringBuilder();
             sb.Append("```\n");
             foreach (MangaYuri manga in mangas) {
                 sb.Append("[Info] ");
-                sb.Append($"Nuevo elemento (TmoId={manga.TmoId}) [{i - mangas.Count + 2}/{i + 1 + r}]");
+                sb.Append($"Nuevo elemento (TmoId={manga.TmoId}) [{j - mangas.Count + 2}/{i + 1 + r}]");
                 sb.Append('\n');
-                i++;
+                j++;
             }
             if (status != null) {
                 sb.Append($"[Info] {status}");
