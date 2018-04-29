@@ -63,7 +63,7 @@ namespace YuriDb.Bot.Modules
                                                  uint i, 
                                                  uint r)
         {
-            int j = i;
+            uint j = i;
             StringBuilder sb = new StringBuilder();
             sb.Append("```\n");
             foreach (MangaYuri manga in mangas) {
