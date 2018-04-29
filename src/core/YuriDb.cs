@@ -36,6 +36,73 @@ namespace YuriDb.Core
         Todos = Manga | Manhua | Manhwa | Novela | Propio | Otro
     }
 
+    public enum StaffTipo : byte
+    {
+        Ninguno = 0,
+        Autor   = 1 << 0,
+        Artista = 1 << 1,
+        Otro    = 1 << 3,
+        Todo   = 1 << 6,
+        Todos = Autor | Artista | Otro | Todo
+    }
+
+    public class StaffManga
+    {
+        public uint? Id { get; set; }
+        public uint? Tmoid { get; set; }
+        public string Nombre { get; set; }
+        public uint? MangaId { get; set; }
+        public StaffTipo Tipo { get; set; }
+        
+        public StaffManga(uint? id, uint? tmoId, uint? mangaId)
+        {
+            Id = id;
+            Tmoid = tmoId;
+            MangaId = mangaId;
+
+        }
+
+        public StaffManga(uint? id, uint? tmoId) :
+         this(null, id, tmoId)
+        { }
+    }
+        
+    public class Revista
+    {
+        public uint? Id { get; set; }
+        public uint? Tmoid { get; set; }
+        public string Nombre { get; set; }
+        public TimeSpan Periodicidad { get; set; }
+
+        public Revista(uint? id, uint? tmoId)
+        {
+            Id = id;
+            Tmoid = tmoId;
+        }
+
+        public Revista(uint? id) :
+         this(null, id)
+        { }
+
+    }
+
+    public class MangaNomAlterno
+    {
+        public uint? Id { get; set; }
+        public string Nombres { get; set; }
+        public uint? MangaId { get; set; }
+      
+        public MangaNomAlterno(uint? id, uint? mangaId)
+        {
+            Id = id;
+            MangaId = mangaId;
+        }
+
+        public MangaNomAlterno(uint? id) :
+            this(null, id)
+        { }
+    }
+
     public class MangaYuri
     {
         public DateTime? TmoCreacion { get; private set; }
@@ -46,7 +113,10 @@ namespace YuriDb.Core
         public uint Capitulos { get; set; }
         public uint? Id { get; private set; }
         public uint? TmoId { get; private set; }
-        public Uri Imagen { get; set; } 
+        public Uri Imagen { get; set; }
+        public string Autor { get; set; }
+        public string Artista { get; set; }
+        public string Revista    { get; set; }
 
         public MangaYuri(uint? id, uint? tmoId, DateTime? tmoCreacion)
         {
@@ -203,9 +273,87 @@ tipo            TINYINT UNSIGNED    NOT NULL,
 FULLTEXT INDEX (nombre),
 CONSTRAINT CHECK((tmoId IS NULL AND tmoCreación IS NULL) OR 
                  (tmoID IS NOT NULL AND tmoCreación IS NOT NULL))
-) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de los mangas extraídos de TMO'";
+) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de los mangas extraídos de TMO';
+CREATE TABLA IF NOT EXIST `{Db}`.`revistas` (
+id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
+tmoid           INT UNSIGNED        NULL UNIQUE KEY,
+nombre          VARCHAR(512)        NULL,
+periodicidad    TIMESTAMP           NULL,
+) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las revistas extraídos de TMO';
+CREATE TABLA IF NOT EXIST `{Db}`.`staffmanga` (
+id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
+tmoid           INT UNSIGNED        NULL UNIQUE KEY, 
+nombre          VARCHAR(512)        NULL,
+mangaid         INT UNSIGNED        NOT NULL,
+tipo            INT UNSIGNED        NOT NULL,
+) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las autores y artistas extraídos de TMO';
+CREATE TABLA IF NOT EXIST `{ Db}`.`nombresalternos` (
+id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
+nombres         VARCHAR(1024)       NULL,
+mangaid         INT UNSIGNED        NOT NULL,
+) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las nombres alternos de los mangas extraídos de TMO'";
                 cmd.ExecuteNonQuery();
             }
+        }
+
+        public void AgregarRevista(Revista revista)
+        {
+            lock (_connection)
+                {
+                    MySqlCommand cmd = _connection.CreateCommand();
+                    cmd.CommandText =
+    $@"INSERT INTO `{Db}`.`revista` 
+( tmoid, nombre, periodicidad
+) values (
+  @tmoId, @nombre, @periodicidad
+)";
+                    cmd.Parameters.AddWithValue("@tmoid", revista.Tmoid);
+                    cmd.Parameters.AddWithValue("@nombre", revista.Nombre);
+                    cmd.Parameters.AddWithValue("@periodicidad", revista.Periodicidad);
+                    cmd.Prepare();
+                    cmd.ExecuteNonQuery();
+                }
+
+        }
+
+        public void AgregarStaffM(StaffManga staff)
+        {
+            lock (_connection)
+            {
+                MySqlCommand cmd = _connection.CreateCommand();
+                cmd.CommandText =
+$@"INSERT INTO `{Db}`.`staffmanga` 
+( nombre, tmoid, mangaid, tipo
+) values (
+  @nombre, @tmoid, @mangaid, @tipo
+)";
+                cmd.Parameters.AddWithValue("@nombre", staff.Nombre);
+                cmd.Parameters.AddWithValue("@tmoid", staff.Tmoid);
+                cmd.Parameters.AddWithValue("@mangaid", staff.MangaId);
+                cmd.Parameters.AddWithValue("@tipo", staff.Tipo);
+                cmd.Prepare();
+                cmd.ExecuteNonQuery();
+            }
+
+        }
+
+        public void AgregarNomAltManga(MangaNomAlterno mangaNomAlterno)
+        {
+            lock (_connection)
+            {
+                MySqlCommand cmd = _connection.CreateCommand();
+                cmd.CommandText =
+$@"INSERT INTO `{Db}`.`nombresalternos` 
+( nombres, mangaid
+) values (
+  @nombres, @mangaid
+)";
+                cmd.Parameters.AddWithValue("@nombres", mangaNomAlterno.Nombres);
+                cmd.Parameters.AddWithValue("@mangaid", mangaNomAlterno.MangaId);
+                cmd.Prepare();
+                cmd.ExecuteNonQuery();
+            }
+
         }
 
         public void AgregarManga(MangaYuri manga)
