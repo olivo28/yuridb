@@ -89,7 +89,7 @@ namespace YuriDb.Core
     public class MangaNomAlterno
     {
         public uint? Id { get; set; }
-        public string Nombres { get; set; }
+        public string Nombre { get; set; }
         public uint? MangaId { get; set; }
       
         public MangaNomAlterno(uint? id, uint? mangaId)
@@ -274,23 +274,24 @@ FULLTEXT INDEX (nombre),
 CONSTRAINT CHECK((tmoId IS NULL AND tmoCreación IS NULL) OR 
                  (tmoID IS NOT NULL AND tmoCreación IS NOT NULL))
 ) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de los mangas extraídos de TMO';
-CREATE TABLA IF NOT EXIST `{Db}`.`revistas` (
+CREATE TABLE IF NOT EXISTS `{Db}`.`revistas` (
 id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
 tmoid           INT UNSIGNED        NULL UNIQUE KEY,
-nombre          VARCHAR(512)        NULL,
-periodicidad    TIMESTAMP           NULL,
+nombre          VARCHAR(256)        NULL,
+periodicidad    TIMESTAMP           NULL
 ) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las revistas extraídos de TMO';
-CREATE TABLA IF NOT EXIST `{Db}`.`staffmanga` (
+CREATE TABLE IF NOT EXISTS `{Db}`.`staffs` (
 id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
 tmoid           INT UNSIGNED        NULL UNIQUE KEY, 
-nombre          VARCHAR(512)        NULL,
+nombre          VARCHAR(256)        NULL,
 mangaid         INT UNSIGNED        NOT NULL,
 tipo            INT UNSIGNED        NOT NULL,
+UNIQUE (nombre, mangaid)
 ) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las autores y artistas extraídos de TMO';
-CREATE TABLA IF NOT EXIST `{ Db}`.`nombresalternos` (
+CREATE TABLE IF NOT EXISTS `{ Db}`.`nombresAlternos` (
 id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
-nombres         VARCHAR(1024)       NULL,
-mangaid         INT UNSIGNED        NOT NULL,
+nombre         VARCHAR(256)       NULL,
+mangaid         INT UNSIGNED        NOT NULL
 ) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las nombres alternos de los mangas extraídos de TMO'";
                 cmd.ExecuteNonQuery();
             }
@@ -322,7 +323,7 @@ mangaid         INT UNSIGNED        NOT NULL,
             {
                 MySqlCommand cmd = _connection.CreateCommand();
                 cmd.CommandText =
-$@"INSERT INTO `{Db}`.`staffmanga` 
+$@"INSERT INTO `{Db}`.`staffs` 
 ( nombre, tmoid, mangaid, tipo
 ) values (
   @nombre, @tmoid, @mangaid, @tipo
@@ -343,12 +344,12 @@ $@"INSERT INTO `{Db}`.`staffmanga`
             {
                 MySqlCommand cmd = _connection.CreateCommand();
                 cmd.CommandText =
-$@"INSERT INTO `{Db}`.`nombresalternos` 
+$@"INSERT INTO `{Db}`.`nombresAlternos` 
 ( nombres, mangaid
 ) values (
   @nombres, @mangaid
 )";
-                cmd.Parameters.AddWithValue("@nombres", mangaNomAlterno.Nombres);
+                cmd.Parameters.AddWithValue("@nombres", mangaNomAlterno.Nombre);
                 cmd.Parameters.AddWithValue("@mangaid", mangaNomAlterno.MangaId);
                 cmd.Prepare();
                 cmd.ExecuteNonQuery();

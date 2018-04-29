@@ -149,7 +149,7 @@ namespace YuriDb.Core
              (UInt32)(int) alt["idmanga"]
              )
                 {
-                    Nombres = (string) obj["nombre"],
+                    Nombre = (string) obj["nombre"],
                 };
 
 
