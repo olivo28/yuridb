@@ -117,6 +117,42 @@ namespace YuriDb.Core
             	}
                 JObject obj = (JObject) data[i];
                 JObject info = (JObject) obj["info"];
+                JObject revista = (JObject) obj["revistas"];
+                JObject alt = (JObject) obj["nombres_alternativos"];
+                JObject artista = (JObject) obj["artistas"];
+                JObject autor = (JObject) obj["autores"];
+                StaffManga artistas = new StaffManga(
+                    (UInt32) obj["id"],
+                    (UInt32) (int) artista["id"]
+                    )   {
+                    Nombre = (string) artista["artista"],
+                    MangaId = (UInt32) obj["id"],
+                };
+                StaffManga autores = new StaffManga(
+                (UInt32) obj["id"],
+                (UInt32)autor["id"]
+                )
+                {
+                  
+                    Nombre = (string) autor["artista"],
+                    MangaId = (UInt32) obj["id"],
+                };
+                Revista revistas = new Revista(
+                     (UInt32) obj["id"],
+                    (UInt32) revista["id"]
+                    )
+                {
+                    Nombre = (string) revista["revista"],
+                };
+                MangaNomAlterno nomAlterno = new MangaNomAlterno(
+              (UInt32) obj["id"],
+             (UInt32)(int) alt["idmanga"]
+             )
+                {
+                    Nombre = (string) obj["nombre"],
+                };
+
+
                 MangaYuri manga = new MangaYuri(
                 	(UInt32) obj["id"],
                     DateTime.Parse((string) info["fechaCreacion"])
@@ -125,12 +161,16 @@ namespace YuriDb.Core
                     Descripcion = (string) info["sinopsis"],
                     Imagen = new Uri("https://img1.tumangaonline.com/" + (string) obj["imageUrl"]),
                 	Tipo = (MangaTipo) Enum.Parse(typeof(MangaTipo), (string) obj["tipo"], true),
-                	Estado = (MangaEstado) Enum.Parse(typeof(MangaEstado), (string) obj["estado"], true)
+                    Estado = (MangaEstado) Enum.Parse(typeof(MangaEstado), (string) obj["estado"], true)
                 };
                 TmoPage capi = _cliente.GetPagina(TmoClient.ToUriManga(manga.TmoId.Value), 1, 1, page);
                 manga.Capitulos = (UInt32) capi.Data["total"];
                 try {
-                	_db.AgregarManga(manga);
+                    _db.AgregarManga(manga);
+                    _db.AgregarRevista(revistas);
+                    _db.AgregarStaffM(autores);
+                    _db.AgregarStaffM(artistas);
+                    _db.AgregarNomAltManga(nomAlterno);
                 } catch(MySqlException e) {
 					if (e.Number != (int) MySqlErrorCode.DuplicateKeyEntry) {
 						throw e;
