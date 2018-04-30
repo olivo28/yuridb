@@ -216,7 +216,7 @@ namespace YuriDb.Core
             Db = db;
             Host = host;
             Port = port;
-            _connection = new MySqlConnection($"SERVER={Host};PORT={Port};UID={User};PASSWORD={Password}");
+            _connection = new MySqlConnection($"SERVER={Host};PORT={Port};UID={User};PASSWORD={Password};CHARACTERSET=utf8mb4;SSLMODE=none");
         }
 
 
@@ -224,7 +224,7 @@ namespace YuriDb.Core
         {
             lock (_connection) {
                 if (_connection == null || _disposed) {
-                    _connection = new MySqlConnection($"SERVER={Host};PORT={Port};UID={User};PASSWORD={Password}");
+                    _connection = new MySqlConnection($"SERVER={Host};PORT={Port};UID={User};PASSWORD={Password};CHARACTERSET=utf8mb4;SSLMODE=none");
                 } 
             }
         }
@@ -234,6 +234,9 @@ namespace YuriDb.Core
             lock (_connection) {
                 if (!_connected && !_disposed) {   
                     _connection.Open();
+                    var cmd = _connection.CreateCommand();
+                    cmd.CommandText = "SET NAMES utf8mb4";
+                    cmd.ExecuteNonQuery();
                     _connected = true;
                 }
             }
@@ -263,7 +266,7 @@ namespace YuriDb.Core
         public void CrearBaseDeDatos()
         {   lock (_connection){
                 MySqlCommand cmd = _connection.CreateCommand();
-                cmd.CommandText = $"CREATE DATABASE IF NOT EXISTS `{Db}` CHARACTER SET = 'utf8'";
+                cmd.CommandText = $"CREATE DATABASE IF NOT EXISTS `{Db}` CHARACTER SET = 'utf8mb4'";
                 cmd.ExecuteNonQuery();
             }
         }
@@ -277,13 +280,14 @@ $@"CREATE TABLE IF NOT EXISTS `{Db}`.`mangas` (
 id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
 tmoId           INT UNSIGNED        NULL UNIQUE KEY,
 tmoCreación     DATE                NULL COMMENT 'Se usa internamente para búsqueda binaria',
-nombre          VARCHAR(512)        NOT NULL,
-imagen          VARCHAR(256)        NULL,
+nombre          VARCHAR(249)        NOT NULL,
+imagen          VARCHAR(249)        NULL,
 descripción     VARCHAR(1024)       NOT NULL DEFAULT '',
 capítulos       INT UNSIGNED        NOT NULL DEFAULT 0,
 estado          TINYINT UNSIGNED    NOT NULL,
 tipo            TINYINT UNSIGNED    NOT NULL,
 revista         INT UNSIGNED        NULL,
+UNIQUE (`nombre`, `tipo`),
 FULLTEXT INDEX (`nombre`),
 CONSTRAINT CHECK((tmoId IS NULL AND tmoCreación IS NULL) OR 
                  (tmoID IS NOT NULL AND tmoCreación IS NOT NULL))
@@ -291,23 +295,24 @@ CONSTRAINT CHECK((tmoId IS NULL AND tmoCreación IS NULL) OR
 CREATE TABLE IF NOT EXISTS `{Db}`.`revistas` (
 id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
 tmoId           INT UNSIGNED        NULL UNIQUE KEY,
-nombre          VARCHAR(256)        NULL,
-periodicidad    TIMESTAMP           NULL,
+nombre          VARCHAR(249)        NOT NULL UNIQUE KEY,
+periodicidad    TIME              NULL,
 FULLTEXT INDEX(`nombre`)
 ) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las revistas extraídas de TMO';
 CREATE TABLE IF NOT EXISTS `{Db}`.`staffs` (
 id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
-tmoId           INT UNSIGNED        NULL UNIQUE KEY, 
-nombre          VARCHAR(256)        NULL,
+tmoId           INT UNSIGNED        NULL, 
+nombre          VARCHAR(247)        NOT NULL,
 mangaId         INT UNSIGNED        NOT NULL,
-tipo            INT UNSIGNED        NOT NULL,
-UNIQUE (`nombre`, `mangaId`, `tipo`),
+tipo            TINYINT UNSIGNED    NOT NULL,
+UNIQUE (`nombre`, `mangaId`, `tipo`, `tmoId`),
 FULLTEXT INDEX (`nombre`)
 ) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las autores y artistas extraídos de TMO';
 CREATE TABLE IF NOT EXISTS `{Db}`.`nombres_alternos` (
 id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
-nombre          VARCHAR(256)        NULL,
-mangaId         INT UNSIGNED        NOT NULL
+nombre          VARCHAR(249)        NOT NULL,
+mangaId         INT UNSIGNED        NOT NULL,
+FULLTEXT INDEX (`nombre`)
 ) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las nombres alternos de los mangas extraídos de TMO'";
                 cmd.ExecuteNonQuery();
             }
@@ -319,6 +324,7 @@ mangaId         INT UNSIGNED        NOT NULL
             lock (_connection)
                 {
                     MySqlCommand cmd = _connection.CreateCommand();
+                    string periodicidad = revista.Periodicidad == null ? null : revista.Periodicidad.Value.ToString("hhh:mm:ss");
                     cmd.CommandText =
     $@"INSERT INTO `{Db}`.`revistas` 
 ( tmoId, nombre, periodicidad
@@ -328,7 +334,7 @@ mangaId         INT UNSIGNED        NOT NULL
 SELECT LAST_INSERT_ID()";
                     cmd.Parameters.AddWithValue("@tmoId", revista.TmoId);
                     cmd.Parameters.AddWithValue("@nombre", revista.Nombre);
-                    cmd.Parameters.AddWithValue("@periodicidad", revista.Periodicidad);
+                    cmd.Parameters.AddWithValue("@periodicidad", periodicidad);
                     cmd.Prepare();
                     id = Convert.ToUInt32(cmd.ExecuteScalar());
                 }
@@ -367,10 +373,10 @@ $@"INSERT INTO `{Db}`.`staffs`
 $@"INSERT INTO `{Db}`.`nombres_alternos` 
 ( nombre, mangaId
 ) values (
-  @nombres, @mangaid
+  @nombre, @mangaid
 );
 SELECT LAST_INSERT_ID()";
-                cmd.Parameters.AddWithValue("@nombres", mangaNomAlterno.Nombre);
+                cmd.Parameters.AddWithValue("@nombre", mangaNomAlterno.Nombre);
                 cmd.Parameters.AddWithValue("@mangaid", mangaId);
                 cmd.Prepare();
                 id = Convert.ToUInt32(cmd.ExecuteScalar());
@@ -404,8 +410,10 @@ SELECT LAST_INSERT_ID()";
             if (manga.Revista != null) {
                 try {
                     revId = AgregarRevista(manga.Revista);
-                } catch(MySqlException) {
-                    // do nothing
+                } catch(MySqlException e) {
+                    if (e.Number != (int) MySqlErrorCode.DuplicateKeyEntry) {
+                            throw e;
+                    }
                 }
             }
 
@@ -510,24 +518,34 @@ $@"SELECT COUNT(*) FROM `{Db}`.`mangas`
                 lista.Add(GetManga(reader));
             }
             reader.Close();
+            foreach (MangaYuri manga in lista) {
+                manga.Staff = GetStaff(manga.Id.Value);
+                manga.NombresAlternos = GetNombresAlternos(manga.Id.Value);                
+                if (manga.Revista != null) {
+                    manga.Revista = GetRevista(manga.Revista.Id.Value);
+                }
+            }
             return lista.ToArray();
         }
 
         private MangaYuri GetManga(MySqlDataReader reader)
         {          
-            var imagen = (string) reader[4];
+            Uri imagen = Convert.IsDBNull(reader[4]) ? null : new Uri((string) reader[4]);
             MangaYuri manga = new MangaYuri(
                 (UInt32?) reader[0],
-                (UInt32?) reader[1],
-                (DateTime?) reader[2]
+                Convert.IsDBNull(reader[1]) ? null : (UInt32?) reader[1],
+                Convert.IsDBNull(reader[2]) ? null : (DateTime?) reader[2]
             ) {
                 Nombre = (string) reader[3],
-                Imagen = imagen == null ? null : new Uri(imagen),
+                Imagen = imagen,
                 Descripcion = (string) reader[5],
                 Capitulos = (UInt32) reader[6],
                 Estado = (MangaEstado) reader[7],
-                Tipo = (MangaTipo) reader[8]
+                Tipo = (MangaTipo) reader[8],
             };
+            if (!Convert.IsDBNull(reader[9])) {
+                manga.Revista = new Revista((UInt32?) reader[9], null);
+            }
             return manga;            
         }
 
@@ -593,6 +611,77 @@ $@"SELECT * FROM `{Db}`.`mangas`
             }
         }
 
+        public List<StaffManga> GetStaff(uint mangaId)
+        {
+            lock(_connection) {
+                MySqlCommand cmd = _connection.CreateCommand();
+                cmd.CommandText = $"SELECT * FROM `{Db}`.`staffs` WHERE `mangaId` = {mangaId}";
+                MySqlDataReader reader = cmd.ExecuteReader();
+                var staffs = new List<StaffManga>();
+                while (reader.Read()) {
+                    staffs.Add(GetStaff(reader));
+                }
+                reader.Close();
+                return staffs;
+            }
+        }
+
+        private StaffManga GetStaff(MySqlDataReader reader)
+        {
+            StaffManga staff = new StaffManga(
+                (UInt32?) reader[0], 
+                Convert.IsDBNull(reader[1]) ? null : (UInt32?) reader[1]
+            );
+            staff.Nombre = (string) reader[2];
+            staff.Tipo = (StaffTipo) reader[4];
+            return staff;
+        }
+
+        public List<MangaNomAlterno> GetNombresAlternos(uint mangaId)
+        {
+            lock(_connection) {
+                MySqlCommand cmd = _connection.CreateCommand();
+                cmd.CommandText = $"SELECT * FROM `{Db}`.`nombres_alternos` WHERE `mangaId` = {mangaId}";
+                MySqlDataReader reader = cmd.ExecuteReader();
+                var alternos = new List<MangaNomAlterno>();
+                while (reader.Read()) {
+                    alternos.Add(GetNombreAlterno(reader));
+                }
+                reader.Close();
+                return alternos;
+            }
+        }
+
+        private MangaNomAlterno GetNombreAlterno(MySqlDataReader reader)
+        {
+            var nom = new MangaNomAlterno((UInt32?) reader[0]);
+            nom.Nombre = (string) reader[1];
+            return nom;
+        }
+
+        public Revista GetRevista(uint revistaId) 
+        {
+            lock(_connection) {
+                MySqlCommand cmd = _connection.CreateCommand();
+                cmd.CommandText = $"SELECT * FROM `{Db}`.`revistas` WHERE `id` = {revistaId}";
+                MySqlDataReader reader = cmd.ExecuteReader();
+                Revista revista = null;
+                if (reader.Read()) {
+                    revista = GetRevista(reader);
+                }
+                reader.Close();
+                return revista;
+            }
+        }
+
+        private Revista GetRevista(MySqlDataReader reader)
+        {
+            var revista = new Revista((UInt32?) reader[0], (UInt32?) reader[1]);
+            revista.Nombre = (string) reader[2];
+            revista.Periodicidad = Convert.IsDBNull(reader[3]) ? null : (TimeSpan?) reader[3];
+            return revista;
+        }
+
         private static void DotEnvSetup()
         {
             var env = Environment.GetEnvironmentVariables();
@@ -602,7 +691,6 @@ $@"SELECT * FROM `{Db}`.`mangas`
                     DotEnv.InjectIntoEnvironment(vars);
                 }
                 catch (Exception) {
-                    Console.WriteLine("[Error] El archivo .dotenv no existe o es inválido");
                     Environment.Exit(-1);
                 }
             }

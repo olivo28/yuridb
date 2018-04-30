@@ -2,15 +2,174 @@
 using Discord.WebSocket;
 using Discord;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System;
 using YuriDataBase = YuriDb.Core.YuriDb;
 using YuriDb.Bot.Modules;
 using YuriDb.Core;
 
+
 namespace YuriDb.Bot
 {
+    public enum EmbedColors : uint 
+    {
+        Info = 0x4267b2,
+        Warning = 0xff7f27,
+        Error = 0xf16262
+    }
+
+    public class YuriEmbed 
+    {
+        public static EmbedBuilder FromManga(MangaYuri manga)
+        {
+                EmbedBuilder eb = new EmbedBuilder();
+                eb.Title = manga.Nombre;
+                eb.Description = manga.Descripcion;
+                eb.ThumbnailUrl = manga.Imagen.ToString();
+                eb.Color = new Color((uint) EmbedColors.Info);
+                eb.Url = manga.GenerarLink().ToString();
+
+               {
+                    var sbAlts = new StringBuilder();
+                    int i = 0;
+                    foreach (MangaNomAlterno alterno in manga.NombresAlternos) {
+                        if (i > 0) {
+                            sbAlts.Append(", ");
+                        }
+                        sbAlts.Append(alterno.Nombre);
+                        i++;
+                    }
+                    var alts = sbAlts.ToString();
+                    var ebf = new EmbedFieldBuilder();
+                    ebf.Name = "Nombres Alternos";
+                    if (alts.Length == 0) {
+                        ebf.Value = "Ninguno";
+                    } else {
+                        ebf.Value = alts;
+                    }
+                    eb.AddField(ebf);
+                }
+
+                {
+                    var auts = from autor in manga.Staff where autor.Tipo == StaffTipo.Autor select autor;
+                    var arts = from autor in manga.Staff where autor.Tipo == StaffTipo.Artista select autor;
+                    var sbAuts = new StringBuilder();
+                    var sbArts = new StringBuilder();
+                    string val;
+
+                    foreach (StaffManga autor in auts) {
+                        sbAuts.Append(autor.Nombre);
+                        sbAuts.Append('\n');
+                    }
+
+                    foreach(StaffManga artista in arts) {
+                        sbArts.Append(artista.Nombre);
+                        sbArts.Append('\n');
+                    } 
+
+                    val = sbAuts.ToString();
+                    EmbedFieldBuilder efb = new EmbedFieldBuilder();
+                    efb.Name = "Autor";
+                    if (val.Length == 0) {
+                        efb.Value = "Desconocido";
+                    } else {
+                        efb.Value = val;
+                    }
+                    efb.IsInline = true;
+                    eb.AddField(efb);
+
+                    val = sbAuts.ToString();
+                    efb = new EmbedFieldBuilder();
+                    efb.Name = "Artista";
+                    if (val.Length == 0) {
+                        efb.Value = "Desconocido";
+                    } else {
+                        efb.Value = val;
+                    }
+                    efb.IsInline = true;
+                    eb.AddField(efb);
+                }
+
+                {
+                    var efb = new EmbedFieldBuilder();
+                    efb.IsInline = true;
+                    efb.Name = "Revista";
+                    if (manga.Revista != null) {
+                        efb.Value = manga.Revista.Nombre;
+                    } else {
+                        efb.Value = "Desconocido";
+                    }
+                    eb.AddField(efb);
+
+                    efb = new EmbedFieldBuilder();
+                    efb.IsInline = true;
+                    efb.Name = "Periodicidad";
+                    if (manga.Revista != null && manga.Revista.Periodicidad != null) {
+                        efb.Value = string.Format("{0:%d} días", manga.Revista.Periodicidad.Value);
+                    } else {
+                        efb.Value = "Desconocido";
+                    }
+                    eb.AddField(efb);
+                }
+
+                eb.AddField(new EmbedFieldBuilder()
+                    .WithIsInline(true)
+                    .WithName("Id")
+                    .WithValue(manga.Id)
+                );
+                eb.AddField(new EmbedFieldBuilder()
+                    .WithIsInline(true)
+                    .WithName("TmoId")
+                    .WithValue(manga.TmoId)
+                );
+                eb.AddField(new EmbedFieldBuilder()
+                    .WithName("Tipo")
+                    .WithIsInline(true)
+                    .WithValue(manga.Tipo)
+                );
+                eb.AddField(new EmbedFieldBuilder()
+                    .WithIsInline(true)
+                    .WithName("Estado")
+                    .WithValue(manga.Estado)
+                );
+                eb.AddField(new EmbedFieldBuilder()
+                    .WithName("Capítulos (se incluyen especiales)")
+                    .WithValue($"{manga.Capitulos}")
+                );
+                return eb;          
+        }
+
+        public static EmbedBuilder FromUpdateLog(List<MangaYuri> mangas, 
+                                                 string status, 
+                                                 uint i, 
+                                                 uint r)
+        {
+            uint j = i;
+            StringBuilder sb = new StringBuilder();
+            sb.Append("```\n");
+            foreach (MangaYuri manga in mangas) {
+                sb.Append("[Info] ");
+                sb.Append($"Nuevo elemento (TmoId={manga.TmoId}) [{j - mangas.Count + 2}/{i + 1 + r}]");
+                sb.Append('\n');
+                j++;
+            }
+            if (status != null) {
+                sb.Append($"[Info] {status}");
+            }
+            sb.Append("```");
+            EmbedBuilder eb = new EmbedBuilder();
+            eb.Title = "Actualización";
+            eb.Description = sb.ToString();
+            eb.Color = new Color((uint) EmbedColors.Info);
+            return eb;
+        }
+    }
+
+
     public class Bot
     {
         private static object _lock = new object();

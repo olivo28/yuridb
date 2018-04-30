@@ -113,7 +113,6 @@ namespace YuriDb.Core
             Revista revista = null;
 
             for (int i = (int) index; i < data.Count; i++) {
-                bool duplicated = false;
                 _waitFor(page);
                 if(!_isUpdating) {
                     return;
@@ -137,7 +136,7 @@ namespace YuriDb.Core
                     foreach (object o in a_alts) {
                         var ob = (JObject) o;
                         var n = new MangaNomAlterno();
-                        n.Nombre = (string) obj["nombre"];
+                        n.Nombre = (string) ob["nombre"];
                         alts.Add(n);
                     }   
 
@@ -149,7 +148,7 @@ namespace YuriDb.Core
                         staff.Add(a);
                     }   
 
-                    foreach(Object o in a_auts) {
+                    foreach(object o in a_auts) {
                         var ob = (JObject) o;
                         var a = new StaffManga((UInt32) ob["id"]);
                         a.Nombre = (string) ob["autor"];
@@ -170,24 +169,15 @@ namespace YuriDb.Core
                 };
                 TmoPage capi = _cliente.GetPagina(TmoClient.ToUriManga(manga.TmoId.Value), 1, 1, page);
                 manga.Capitulos = (UInt32) capi.Data["total"];
-                
-
                 manga.Staff = staff;
                 manga.NombresAlternos = alts;
                 manga.Revista = revista;
-                try {
-                    _db.AgregarManga(manga);
-                } catch(MySqlException e) {
-                    if (e.Number != (int) MySqlErrorCode.DuplicateKeyEntry) {
-                        throw e;
-                    }
-                    duplicated = true;
-                }
+                _db.AgregarManga(manga);
                 _updated++;
                 _remaining--;
                 
                 lock (_lock) {
-                    if (_onAdd != null && !duplicated) {
+                    if (_onAdd != null) {
                         _onAdd(manga, _updated - 1, _remaining);
                     }
                 }

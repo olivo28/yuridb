@@ -11,7 +11,7 @@
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <BaseIntermediateOutputPath>$(SolutionDir)\obj\$(Configuration)\$(AssemblyName)\</BaseIntermediateOutputPath>
+    <BaseIntermediateOutputPath>$(SolutionDir)\obj\$(AssemblyName)\</BaseIntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -42,6 +42,15 @@
     <None Include="$(SolutionDir)\.env">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="DotEnvFile" Version="1.0.0" />
+    <PackageReference Include="MySql.Data">
+      <Version>8.0.11</Version>
+    </PackageReference>
+    <PackageReference Include="Newtonsoft.Json">
+      <Version>11.0.2</Version>
+    </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

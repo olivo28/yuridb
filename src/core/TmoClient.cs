@@ -73,7 +73,7 @@ namespace YuriDb.Core
 
         public TimeSpan WaitTime() 
         {
-            TimeSpan wait = TimeSpan.FromSeconds(90) - (DateTime.Now - TopParent().TimeStamp);
+            TimeSpan wait = TimeSpan.FromSeconds(105) - (DateTime.Now - TopParent().TimeStamp);
         	if (wait.Ticks >= 0) {
                 return wait;
             } else {
