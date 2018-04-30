@@ -114,6 +114,63 @@ namespace YuriDb.Core
         }
     }
 
+    public class Capítulos
+    {
+        public uint? Id { get; private set; }
+        public uint? IdTomo { get; private set; }
+        public uint? MangaId { get; private set; }
+        public uint? NumCap { get; set; }
+        public string NombreCap { get; set; }
+        public uint? IdScan { get; private set; }
+        public uint? Joint { get; private set; }
+        public DateTime? FechaPublicación { get; set; }
+
+        public Capítulos(uint? id, uint? idTomo)
+        {
+            Id = id;
+            IdTomo = idTomo;
+        }
+
+        public Capítulos(uint? idTomo) :
+               this(null, idTomo)
+        {
+
+        }
+        public Capítulos() :
+               this(null)
+        {
+
+        }
+
+    }
+
+    public class Scans
+    {
+        public uint? Id { get; private set; }
+        public uint? IdTomo { get; private set; }
+        public string Nombre { get; set; }
+        public Uri Logo { get; set; }
+        public string URLNombre { get; set; }
+        
+        public Scans(uint? id, uint? idTomo)
+        {
+            Id = id;
+            IdTomo = idTomo;
+        }
+
+        public Scans(uint? idTomo) :
+            this(null, idTomo)
+        {
+
+        }
+        public Scans() :
+            this(null)
+        {
+
+        }
+
+    }
+    
     public class MangaYuri
     {
         public DateTime? TmoCreacion { get; private set; }
@@ -313,9 +370,76 @@ id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
 nombre          VARCHAR(249)        NOT NULL,
 mangaId         INT UNSIGNED        NOT NULL,
 FULLTEXT INDEX (`nombre`)
-) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las nombres alternos de los mangas extraídos de TMO'";
+) 
+CREATE TABLE IF NOT EXISTS `{Db}`.`capítulos` (
+id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
+idtomo          INT UNSIGNED        NOT NULL UNIQUE KEY,
+mangaid         INT UNSIGNED        NOT NULL,
+numcap          INT UNSIGNED        NOT NULL,
+nombrecap       VARCHAR(256)        NULL,
+idscan          INT UNSIGNED        NOT NULL,
+joint           INT UNSIGNED        NULL,
+fechapublicación    DATE            NOT NULL    
+) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de los ultimos capítulos estrenados en TMO';
+CREATE TABLE IF NOT EXISTS `{Db}`.`scans` (
+id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
+idtomo          INT UNSIGNED        NOT NULL UNIQUE KEY,
+nombre          VARCHAR(256)        NOT NULL,
+logo            VARCHAR(512)        NULL,
+urlnombre       VARCHAR(256)        NOT NULL    
+) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las scans extraídos de TMO';";
+
                 cmd.ExecuteNonQuery();
             }
+        }
+
+        public uint AgregarCapítulo(Capítulos capítulo)
+        {
+            uint id = 0;
+            lock(_connection)
+            {
+                MySqlCommand cmd = _connection.CreateCommand();
+                cmd.CommandText =
+$@"INSERT INTO `{Db}`.`capítulos` 
+( idtomo, mangaid, numcap, nombrecap, idscan, joint, fechapublicación,
+) values (
+  @idtomo, @mangaid, @numcap, @nombrecap, @idscan, @joint, @fechapublicación
+);
+SELECT LAST_INSERT_ID()";
+                cmd.Parameters.AddWithValue("@idtomo", capítulo.IdTomo);
+                cmd.Parameters.AddWithValue("@mangaid", capítulo.MangaId);
+                cmd.Parameters.AddWithValue("@numcap", capítulo.NumCap);
+                cmd.Parameters.AddWithValue("@nombrecap", capítulo.NombreCap);
+                cmd.Parameters.AddWithValue("@idscan", capítulo.IdScan);
+                cmd.Parameters.AddWithValue("@joint", capítulo.Joint);
+                cmd.Parameters.AddWithValue("@fechapublicación", capítulo.FechaPublicación);
+                cmd.Prepare();
+                id = Convert.ToUInt32(cmd.ExecuteScalar());
+            }
+            return id;
+        }
+
+        public uint AgregarScan(Scans scans)
+        {
+            uint id = 0;
+            lock (_connection)
+            {
+                MySqlCommand cmd = _connection.CreateCommand();
+                cmd.CommandText =
+$@"INSERT INTO `{Db}`.`scans` 
+( idtomo, nombre, logo, urlnombre
+) values (
+  @idtomo, @nombre, @logo, @urlnombre
+);
+SELECT LAST_INSERT_ID()";
+                cmd.Parameters.AddWithValue("@idtomo", scans.IdTomo);
+                cmd.Parameters.AddWithValue("@nombre", scans.Nombre);
+                cmd.Parameters.AddWithValue("@logo", scans.Logo);
+                cmd.Parameters.AddWithValue("@urlnombre", scans.URLNombre);
+                cmd.Prepare();
+                id = Convert.ToUInt32(cmd.ExecuteScalar());
+            }
+            return id;
         }
 
         public uint AgregarRevista(Revista revista)

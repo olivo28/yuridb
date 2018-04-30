@@ -169,15 +169,35 @@ namespace YuriDb.Core
                 };
                 TmoPage capi = _cliente.GetPagina(TmoClient.ToUriManga(manga.TmoId.Value), 1, 1, page);
                 manga.Capitulos = (UInt32) capi.Data["total"];
+<<<<<<< HEAD
                 manga.Staff = staff;
                 manga.NombresAlternos = alts;
                 manga.Revista = revista;
                 _db.AgregarManga(manga);
+=======
+                
+
+                manga.Staff = staff;
+                manga.NombresAlternos = alts;
+                manga.Revista = revista;
+                try {
+                    _db.AgregarManga(manga);
+                } catch(MySqlException e) {
+                    if (e.Number != (int) MySqlErrorCode.DuplicateKeyEntry) {
+                        throw e;
+                    }
+                    duplicated = true;
+                }
+>>>>>>> olivo
                 _updated++;
                 _remaining--;
                 
                 lock (_lock) {
+<<<<<<< HEAD
                     if (_onAdd != null) {
+=======
+                    if (_onAdd != null && !duplicated) {
+>>>>>>> olivo
                         _onAdd(manga, _updated - 1, _remaining);
                     }
                 }
