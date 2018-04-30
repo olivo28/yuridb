@@ -137,7 +137,7 @@ namespace YuriDb.Core
                     foreach (object o in a_alts) {
                         var ob = (JObject) o;
                         var n = new MangaNomAlterno();
-                        n.Nombre = (string) obj["nombre"];
+                        n.Nombre = (string) ob["nombre"];
                         alts.Add(n);
                     }   
 
