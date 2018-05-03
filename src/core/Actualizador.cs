@@ -69,6 +69,7 @@ namespace YuriDb.Core
             _updated = 0;
             _remaining = 0;
             var page = _cliente.GetPagina(TmoClient.MangasYuri, 1, 1);
+            var caps = _cliente.GetPagina(TmoClient.ToUriManga();
             uint countBd = (uint) _db.GetCantidadMangas();
             
             _remaining = page.Count() - countBd;
@@ -183,6 +184,15 @@ namespace YuriDb.Core
                 }
             }
         }
+
+        private void _agregarCaps(TmoPage caps)
+        {
+            JArray data = (JArray)caps.Data["data"];
+
+
+        }
+
+
 
         private void _stop()
         {

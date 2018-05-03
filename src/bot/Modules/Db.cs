@@ -69,6 +69,53 @@ namespace YuriDb.Bot.Modules
                 });         
             }
 
+            [Command("staff")]
+            [Alias("staff")]
+            [Summary("Busca un manga su autor o artista y devuelve una lista de coincidencias")]
+            public Task SearchByStaff(
+              [Name("staff"), Summary("Nombre del artista/autor a buscar"), Remainder] string nombre)
+            {
+                return Task.Run(() => {
+                    MangaYuri[] mangas = Db.GetMangasStaff(nombre);
+                    if (mangas.Length == 0)
+                    {
+                        ReplyAsync("Ninguna coincidencia");
+                        return;
+                    }
+                    EmbedBuilder eb = new EmbedBuilder();
+                    eb.Color = new Color((uint)EmbedColors.Info);
+                    StringBuilder sb = new StringBuilder();
+                    int i = 1;
+                    foreach (MangaYuri manga in mangas)
+                    {
+                        sb.Append("**");
+                        sb.Append('[');
+                        sb.Append(i);
+                        sb.Append(". ");
+                        sb.Append(MarkdownScape(manga.Nombre));
+                        sb.Append(' ');
+                        sb.Append("\\[");
+                        sb.Append(manga.Id.Value);
+                        sb.Append("\\] ");
+                        sb.Append(']');
+                        sb.Append('(');
+                        sb.Append(MarkdownScape(manga.GenerarLink().ToString()));
+                        sb.Append(')');
+                        sb.Append("**");
+                        sb.Append('\n');
+                        sb.Append($"**{manga.Tipo.ToString()} {manga.Estado.ToString()}**");
+                        sb.Append('\n');
+                        sb.Append($"Capítulos: {manga.Capitulos}");
+                        sb.Append('\n');
+                        i++;
+                    }
+                    sb.Append("\n**Nota**: se incluyen los capítulos especiales en el número de capítulos");
+                    eb.Title = "Búsqueda para " + nombre;
+                    eb.Description = sb.ToString();
+                    ReplyAsync("", false, eb.Build());
+                });
+            }
+
             private static string MarkdownScape(string text) 
             {
                 return text.Replace("*", "\\*")

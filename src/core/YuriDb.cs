@@ -117,22 +117,21 @@ namespace YuriDb.Core
     public class Capítulos
     {
         public uint? Id { get; private set; }
-        public uint? IdTomo { get; private set; }
+        public uint? Tomo { get; private set; }
         public uint? MangaId { get; private set; }
-        public uint? NumCap { get; set; }
-        public string NombreCap { get; set; }
-        public uint? IdScan { get; private set; }
-        public uint? Joint { get; private set; }
-        public DateTime? FechaPublicación { get; set; }
+        public float Capítulo { get; set; }
+        public string Nombre { get; set; }
+        public uint? OwnerId { get; private set; }
+        public DateTime? Creación { get; set; }
 
-        public Capítulos(uint? id, uint? idTomo)
+        public Capítulos(uint? id, uint? tomo)
         {
             Id = id;
-            IdTomo = idTomo;
+            Tomo = tomo;
         }
 
-        public Capítulos(uint? idTomo) :
-               this(null, idTomo)
+        public Capítulos(uint? tomo) :
+               this(null, tomo)
         {
 
         }
@@ -147,19 +146,19 @@ namespace YuriDb.Core
     public class Scans
     {
         public uint? Id { get; private set; }
-        public uint? IdTomo { get; private set; }
+        public uint? TmoId { get; private set; }
         public string Nombre { get; set; }
         public Uri Logo { get; set; }
-        public string URLNombre { get; set; }
+        public string Website { get; set; }
         
-        public Scans(uint? id, uint? idTomo)
+        public Scans(uint? id, uint? tmoId)
         {
             Id = id;
-            IdTomo = idTomo;
+            TmoId = tmoId;
         }
 
-        public Scans(uint? idTomo) :
-            this(null, idTomo)
+        public Scans(uint? tmoId) :
+            this(null, tmoId)
         {
 
         }
@@ -170,6 +169,25 @@ namespace YuriDb.Core
         }
 
     }
+
+    public class Joints
+    {
+        public uint? Id { get; private set; }
+        public uint? CapítuloId { get; private set; }      
+        public uint? ScanId { get; private set; }
+
+        public Joints(uint? id)
+        {
+            Id = id;
+        }
+        public Joints() :
+            this(null)
+        {
+
+        }
+    }
+
+
     
     public class MangaYuri
     {
@@ -370,24 +388,34 @@ id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
 nombre          VARCHAR(249)        NOT NULL,
 mangaId         INT UNSIGNED        NOT NULL,
 FULLTEXT INDEX (`nombre`)
-) 
+) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de nombres alternos de los mangas extraídos de TMO';
 CREATE TABLE IF NOT EXISTS `{Db}`.`capítulos` (
 id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
-idtomo          INT UNSIGNED        NOT NULL UNIQUE KEY,
-mangaid         INT UNSIGNED        NOT NULL,
-numcap          INT UNSIGNED        NOT NULL,
-nombrecap       VARCHAR(256)        NULL,
-idscan          INT UNSIGNED        NOT NULL,
-joint           INT UNSIGNED        NULL,
-fechapublicación    DATE            NOT NULL    
+tomo            TINYINT UNSIGNED    NULL,
+mangaId         INT UNSIGNED        NOT NULL,
+capítulo        INT UNSIGNED        NOT NULL,
+nombre          VARCHAR(249)        NOT NULL DEFAULT '',
+ownerId         INT UNSIGNED        NOT NULL,
+creación        DATE                NULL,
+UNIQUE (`tomo`, `mangaId`, `capítulo`, `ownerId`)
 ) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de los ultimos capítulos estrenados en TMO';
 CREATE TABLE IF NOT EXISTS `{Db}`.`scans` (
 id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
-idtomo          INT UNSIGNED        NOT NULL UNIQUE KEY,
-nombre          VARCHAR(256)        NOT NULL,
-logo            VARCHAR(512)        NULL,
-urlnombre       VARCHAR(256)        NOT NULL    
-) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las scans extraídos de TMO';";
+tmoId           INT UNSIGNED        NULL,
+nombre          VARCHAR(249)        NOT NULL UNIQUE KEY,
+logo            VARCHAR(249)        NULL,
+website         VARCHAR(249)        NOT NULL
+) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las scans extraídos de TMO';
+CREATE TABLE IF NOT EXISTS `{Db}`.`joints` (
+id              INT UNSIGNED        AUTO_INCREMENT PRIMARY KEY,
+capítuloId      INT UNSIGNED        NOT NULL,
+scanId          INT UNSIGNED        NOT NULL,
+UNIQUE (`capítuloId`, `scanId`)
+) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las joints extraídos de TMO'
+CREATE TABLE IF NOT EXISTS `{Db}`.`nombres_capítulos` (
+capítuloId      INT UNSIGNED        NOT NULL PRIMARY KEY,
+nombre          VARCHAR(249)        NULL,
+) ENGINE = MyIsam, COMMENT = 'Guarda referencias y la información de las nombres de los capítulos extraídos de TMO'";
 
                 cmd.ExecuteNonQuery();
             }
@@ -401,18 +429,17 @@ urlnombre       VARCHAR(256)        NOT NULL
                 MySqlCommand cmd = _connection.CreateCommand();
                 cmd.CommandText =
 $@"INSERT INTO `{Db}`.`capítulos` 
-( idtomo, mangaid, numcap, nombrecap, idscan, joint, fechapublicación,
+( tomo, mangaId, capítulo, nombre, ownerId, creación
 ) values (
-  @idtomo, @mangaid, @numcap, @nombrecap, @idscan, @joint, @fechapublicación
+  @tomo, @mangaId, @capítulo, @nombre, @ownerId, @creación
 );
 SELECT LAST_INSERT_ID()";
-                cmd.Parameters.AddWithValue("@idtomo", capítulo.IdTomo);
-                cmd.Parameters.AddWithValue("@mangaid", capítulo.MangaId);
-                cmd.Parameters.AddWithValue("@numcap", capítulo.NumCap);
-                cmd.Parameters.AddWithValue("@nombrecap", capítulo.NombreCap);
-                cmd.Parameters.AddWithValue("@idscan", capítulo.IdScan);
-                cmd.Parameters.AddWithValue("@joint", capítulo.Joint);
-                cmd.Parameters.AddWithValue("@fechapublicación", capítulo.FechaPublicación);
+                cmd.Parameters.AddWithValue("@tomo", capítulo.Tomo);
+                cmd.Parameters.AddWithValue("@mangaId", capítulo.MangaId);
+                cmd.Parameters.AddWithValue("@capítulo", capítulo.Capítulo);
+                cmd.Parameters.AddWithValue("@nombre", capítulo.Nombre);
+                cmd.Parameters.AddWithValue("@ownerId", capítulo.OwnerId);
+                cmd.Parameters.AddWithValue("@creación", capítulo.Creación);
                 cmd.Prepare();
                 id = Convert.ToUInt32(cmd.ExecuteScalar());
             }
@@ -427,15 +454,57 @@ SELECT LAST_INSERT_ID()";
                 MySqlCommand cmd = _connection.CreateCommand();
                 cmd.CommandText =
 $@"INSERT INTO `{Db}`.`scans` 
-( idtomo, nombre, logo, urlnombre
+( tmoId, nombre, logo, website
 ) values (
-  @idtomo, @nombre, @logo, @urlnombre
+  @tmoId, @nombre, @logo, @website
 );
 SELECT LAST_INSERT_ID()";
-                cmd.Parameters.AddWithValue("@idtomo", scans.IdTomo);
+                cmd.Parameters.AddWithValue("@tmoId", scans.TmoId);
                 cmd.Parameters.AddWithValue("@nombre", scans.Nombre);
                 cmd.Parameters.AddWithValue("@logo", scans.Logo);
-                cmd.Parameters.AddWithValue("@urlnombre", scans.URLNombre);
+                cmd.Parameters.AddWithValue("@website", scans.Website);
+                cmd.Prepare();
+                id = Convert.ToUInt32(cmd.ExecuteScalar());
+            }
+            return id;
+        }
+
+        public uint AgregarNombresCapítulos()
+        {
+            uint id = 0;
+            lock (_connection)
+            {
+                MySqlCommand cmd = _connection.CreateCommand();
+                cmd.CommandText =
+$@"INSERT INTO `{Db}`.`nombres_capítulos` 
+( capítuloId, nombre
+) values (
+  @capítuloId, @nombre
+);
+SELECT LAST_INSERT_ID()";
+                cmd.Parameters.AddWithValue("@capítuloId", .);
+                cmd.Parameters.AddWithValue("@nombre", .);
+                cmd.Prepare();
+                id = Convert.ToUInt32(cmd.ExecuteScalar());
+            }
+            return id;
+        }
+
+        public uint AgregarJoints(Joints joints)
+        {
+            uint id = 0;
+            lock (_connection)
+            {
+                MySqlCommand cmd = _connection.CreateCommand();
+                cmd.CommandText =
+$@"INSERT INTO `{Db}`.`joints` 
+( capítuloId, scanId  
+) values (
+  @capítuloId, @scanId
+);
+SELECT LAST_INSERT_ID()";
+                cmd.Parameters.AddWithValue("@capítuloId", joints.CapítuloId);
+                cmd.Parameters.AddWithValue("@scanId", joints.ScanId);
                 cmd.Prepare();
                 id = Convert.ToUInt32(cmd.ExecuteScalar());
             }
@@ -714,6 +783,27 @@ $@"SELECT * FROM `{Db}`.`mangas`
                 return GetMangas(reader);
             }
         }
+
+        public MangaYuri[] GetMangasStaff(string nombre, uint limit)
+        {
+            lock (_connection) {
+                MySqlCommand cmd = _connection.CreateCommand();
+                cmd.CommandText =
+$@"SELECT mangas.*  FROM `{Db}`.`mangas` INNER JOIN 
+    `{Db}`.`staffs` ON (mangas.id = staffs.mangaId AND MATCH(staffs.Nombre) 
+    AGAINST(@staff)) GROUP BY mangas.id ORDER BY mangas.id ASC LIMIT {limit}"; 
+                cmd.Parameters.AddWithValue("@staff", nombre);
+                cmd.Prepare();
+                MySqlDataReader reader = cmd.ExecuteReader();
+                return GetMangas(reader);
+            }
+        }
+
+        public MangaYuri[] GetMangasStaff(string nombre)
+        {
+            return GetMangasStaff(nombre, 10);
+        }
+
 
         public MangaYuri[] GetMangas(string nombre)
         {
